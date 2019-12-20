@@ -30,16 +30,11 @@ def main():
         face_encodings = face_recognition.face_encodings(frame)
         print('Face encoded')
         print('Face quantity ' + np.size(face_encodings, 0))
-        compare_flag = False
         for face_encoding in face_encodings:
             print('Face comparing ...')
             compare_results = face_recognition.compare_faces(source_face_encodings, face_encoding)
-            for compare_result in compare_results:
-                if compare_result == True:
-                    compare_flag = True
-                    print('Face recognition success')
-                    break
-            if compare_flag == True:
+            if np.any(compare_results) == True:
+                print('Face recognition success')
                 break
     cap.release()
 
