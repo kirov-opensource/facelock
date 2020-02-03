@@ -5,52 +5,49 @@ import queue
 import cv2 as cv
 import numpy as np
 import face_recognition
-from multiprocessing import Process
 import multiprocessing
 
-def update_frame(rtsp_url,q):
-    print('Connecting to video ...')
+def updateframe(rtsp_url,lock):
+    print('connecting to video ...')
     # set rtsp protocol path
     cap = cv.VideoCapture(rtsp_url)
-    print('Connected')
+    print('connected')
     while cap.isOpened():
         # print('Reading frame ...')
-        ret, current_frame = cap.read()
+        ret, frame = cap.read()
         # if frame is read correctly ret is True
         if not ret:
-            print('Can\'t receive frame (stream end?). Exiting ...')
+            print('can\'t receive frame (stream end?). Exiting ...')
             continue
-        if not q.empty():
-            try:
-                q.get_nowait()   # discard previous (unprocessed) frame
-            except queue.Empty:
-                pass
-        q.put(current_frame)
+        lock.acquire()
+        cv.imwrite('./temp.jpg', frame)
+        lock.release()
     cap.release()
 
-def main(q):
-    source_path = sys.argv[2]
+def main(lock,source_face_encodings):
+    while True:
+        lock.acquire()
+        frame = face_recognition.load_image_file('./temp.jpg')
+        lock.release()
+        print('loaded image')
+        face_encodings = face_recognition.face_encodings(frame)
+        print('face encoded')
+        for face_encoding in face_encodings:
+            print('face comparing ...')
+            compare_results = face_recognition.compare_faces(source_face_encodings, face_encoding)
+            if np.any(compare_results) == True:
+                print('face recognition success')
+                break
+
+if __name__ == "__main__":
+    source_path = sys.argv[1]
     source_face_encodings = []
     # cache source face encoding to memory
     for file_name in os.listdir(source_path):
         file_path = source_path + file_name
         source_face_encodings += face_recognition.face_encodings(face_recognition.load_image_file(file_path))
     print('source face encoded')
-    while True:
-        frame = q.get()
-        print('Get frame')
-        face_encodings = face_recognition.face_encodings(frame)
-        print('Face encoded')
-        print(face_encodings)
-        for face_encoding in face_encodings:
-            print('Face comparing ...')
-            compare_results = face_recognition.compare_faces(source_face_encodings, face_encoding)
-            if np.any(compare_results) == True:
-                print('Face recognition success')
-                break
-
-if __name__ == "__main__":
-    _queue = multiprocessing.Queue()
-    p = Process(target=update_frame, args=(sys.argv[1],_queue,))
+    lock = multiprocessing.Lock()
+    p = multiprocessing.Process(target=updateframe, args=(sys.argv[2],lock,))
     p.start()
-    main(_queue)
+    main(lock, source_face_encodings)
