@@ -14,7 +14,7 @@ Face recognition control lock
 
 ### Run
 ```
-python3 main.py source/ rtsp://192.168.1.154/12
+python3 main.py source/ rtsp://IP
 ```
 
 PS:
