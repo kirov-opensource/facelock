@@ -41,6 +41,7 @@ def main(lock,source_face_encodings):
                 gpio21.on()
                 print('lock opened')
                 time.sleep(2)
+                gpio21.off()
                 print('lock closed')
                 break
 
